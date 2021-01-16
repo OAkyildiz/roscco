@@ -22,6 +22,7 @@ int main(int argc, char* argv[])
   oscc_result_t ret = OSCC_ERROR;
 
   ret = oscc_init();
+  ROS_DEBUG("Initialized OSCC!");
 
   if (ret != OSCC_OK)
   {

@@ -8,6 +8,7 @@ extern "C" {
 }
 
 #include <ros/ros.h>
+#include <std_msgs/Bool.h>
 
 #include <roscco/BrakeReport.h>
 #include <roscco/BrakeReportData.h>
@@ -19,6 +20,7 @@ extern "C" {
 #include <roscco/ThrottleReport.h>
 #include <roscco/ThrottleReportData.h>
 
+
 static ros::Publisher topic_brake_report_;
 
 static ros::Publisher topic_steering_report_;
@@ -28,6 +30,7 @@ static ros::Publisher topic_throttle_report_;
 static ros::Publisher topic_fault_report_;
 
 static ros::Publisher topic_obd_messages_;
+static ros::Publisher oscc_state_pub;
 
 class OsccToRos
 {

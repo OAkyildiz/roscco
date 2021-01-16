@@ -17,14 +17,12 @@ OsccToRos::OsccToRos(ros::NodeHandle* public_nh, ros::NodeHandle* private_nh)
   }
 
   topic_brake_report_ = public_nh->advertise<roscco::BrakeReport>("brake_report", 10);
-
   topic_steering_report_ = public_nh->advertise<roscco::SteeringReport>("steering_report", 10);
-
   topic_throttle_report_ = public_nh->advertise<roscco::ThrottleReport>("throttle_report", 10);
 
   topic_fault_report_ = public_nh->advertise<roscco::FaultReport>("fault_report", 10);
-
   topic_obd_messages_ = public_nh->advertise<roscco::CanFrame>("can_frame", 10);
+  oscc_state_pub = public_nh->advertise<std_msgs::Bool>("oscc_state", 10);
 
   if (sigprocmask(SIG_SETMASK, &orig_mask, NULL) < 0)
   {

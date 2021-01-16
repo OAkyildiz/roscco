@@ -8,7 +8,13 @@
 
 double calc_exponential_average(double AVERAGE, double SETPOINT, double FACTOR);
 double linear_tranformation(double VALUE, double HIGH_1, double LOW_1, double HIGH_2, double LOW_2);
+double map_and_clip(double VALUE, double HIGH_1, double LOW_1, double HIGH_2, double LOW_2, double CUTOFF);
 
+
+// TODO: seriously refactor. Valuea acquisition in callbacks, enable/disable sub in callback
+// TODO: * publish, spin, initiate in LOOP?
+// TODO: *ROS_DEBUG for published values
+// TODO: CHECK STEERING DIRECTION
 class RosccoTeleop
 {
 public:
@@ -41,6 +47,7 @@ private:
   const double THROTTLE_MIN_ = 0;
   const double STEERING_MAX_ = 1;
   const double STEERING_MIN_ = -1;
+  const int BRAKE_AXIS_DIRECTION = -1;
 
   // Store last known value for timed callback
   double brake_ = 0.0;
@@ -53,21 +60,25 @@ private:
   double steering_average_ = 0.0;
 
   // Variable to ensure joystick triggers have been initialized
+  bool throttle_check_ = false;
+  bool brake_check_ = false;
+
   bool initialized_ = false;
 
   // The threshold for considering the controller triggers to be parked in the correct position
   const double PARKED_THRESHOLD_ = 0.99;
 
-  const int BRAKE_AXES_ = 2;
-  const int THROTTLE_AXES_ = 5;
+//TODO: ros param <-> yaml
+  const int BRAKE_AXES_ = 3;
+  const int THROTTLE_AXES_ = 3;
   const int STEERING_AXES_ = 0;
-  const int START_BUTTON_ = 7;
-  const int BACK_BUTTON_ = 6;
+  const int START_BUTTON_ = 9;
+  const int BACK_BUTTON_ = 8;
 
   const double TRIGGER_MIN_ = 1;
   const double TRIGGER_MAX_ = -1;
-  const double JOYSTICK_MIN_ = 1;
-  const double JOYSTICK_MAX_ = -1;
+  const double JOYSTICK_MIN_ = -1;
+  const double JOYSTICK_MAX_ = 1;
 };
 
 /**
@@ -96,20 +107,21 @@ RosccoTeleop::RosccoTeleop()
  * @param joy The ROS Joystick message to be consumed.
  */
 void RosccoTeleop::joystickCallback(const sensor_msgs::Joy::ConstPtr& joy)
-{
+{          brake_check_ = true;
+
   // gamepad triggers default 0 prior to using them which is 50% for the logitech and xbox controller the initilization
   // is to ensure the triggers have been pulled prior to enabling OSCC command
   if (initialized_)
   {
     // Map the trigger values [1, -1] to oscc values [0, 1]
-    brake_ = linear_tranformation(joy->axes[BRAKE_AXES_], TRIGGER_MAX_, TRIGGER_MIN_, BRAKE_MAX_, BRAKE_MIN_);
-    throttle_ =
-        linear_tranformation(joy->axes[THROTTLE_AXES_], TRIGGER_MAX_, TRIGGER_MIN_, THROTTLE_MAX_, THROTTLE_MIN_);
-
+    brake_ = map_and_clip(joy->axes[BRAKE_AXES_], JOYSTICK_MIN_, JOYSTICK_MAX_, BRAKE_MAX_, JOYSTICK_MIN_,BRAKE_MIN_);
+    throttle_ = map_and_clip(joy->axes[THROTTLE_AXES_], JOYSTICK_MAX_, JOYSTICK_MIN_, THROTTLE_MAX_, JOYSTICK_MIN_,THROTTLE_MIN_);
+    
     // Map the joystick to steering [1, -1] to oscc values [-1, 1]
     steering_ =
         linear_tranformation(joy->axes[STEERING_AXES_], JOYSTICK_MAX_, JOYSTICK_MIN_, STEERING_MAX_, STEERING_MIN_);
-
+    
+    ROS_DEBUG("Brake: %f    Throttle: %f    Steering: %f",brake_, throttle_, steering_);
     roscco::EnableDisable enable_msg;
     enable_msg.header.stamp = ros::Time::now();
 
@@ -117,13 +129,18 @@ void RosccoTeleop::joystickCallback(const sensor_msgs::Joy::ConstPtr& joy)
     {
       enable_msg.enable_control = false;
       enable_disable_pub_.publish(enable_msg);
+      if (enabled_){ROS_DEBUG("Disabled");}
       enabled_ = false;
+      
+
     }
     else if ((previous_start_state_ == 0) && joy->buttons[START_BUTTON_])
     {
       enable_msg.enable_control = true;
       enable_disable_pub_.publish(enable_msg);
+      if (!enabled_){ROS_DEBUG("Enabled");}
       enabled_ = true;
+
     }
 
     previous_back_state_ = joy->buttons[BACK_BUTTON_];
@@ -131,6 +148,7 @@ void RosccoTeleop::joystickCallback(const sensor_msgs::Joy::ConstPtr& joy)
 
     if (enabled_)
     {
+      //TODO: everything into  class members here
       roscco::BrakeCommand brake_msg;
       brake_msg.header.stamp = ros::Time::now();
       brake_msg.brake_position = brake_;
@@ -153,22 +171,30 @@ void RosccoTeleop::joystickCallback(const sensor_msgs::Joy::ConstPtr& joy)
   else
   {
     // Ensure the trigger values have been initialized
-    if ((joy->axes[BRAKE_AXES_] > PARKED_THRESHOLD_) && (joy->axes[THROTTLE_AXES_] > PARKED_THRESHOLD_))
-    {
+    if (brake_check_ && throttle_check_) {
       initialized_ = true;
     }
 
-    if (joy->axes[BRAKE_AXES_] <= PARKED_THRESHOLD_)
-    {
-      ROS_INFO("Pull the brake trigger to initialize.");
-    }
-
-    if (joy->axes[THROTTLE_AXES_] <= PARKED_THRESHOLD_)
-    {
-      ROS_INFO("Pull the throttle trigger to initilize.");
+    // throttle must be cleared beofre brake
+    if ( throttle_check_ ) {
+      if ((BRAKE_AXIS_DIRECTION * joy->axes[BRAKE_AXES_] <= PARKED_THRESHOLD_) && ( !brake_check_ ) ) {
+        ROS_INFO("Pull the brake stick to initialize.");
+      }
+      else{
+          brake_check_ = true;
+      }
+    } 
+    else{
+      if ((joy->axes[THROTTLE_AXES_] <= PARKED_THRESHOLD_) && (  !throttle_check_ ) ){
+        ROS_INFO("Floor the throttle stick to initilize.");
+        }
+      else{
+          throttle_check_ = true;
+      }
     }
   }
 }
+
 
 /**
  * @brief Calculate the exponential average
@@ -199,11 +225,34 @@ double calc_exponential_average(const double AVERAGE, const double SETPOINT, con
  * @param  LOW_2  Low value of the new range
  * @return        Data value mapped to the new range
  */
+
 double linear_tranformation(const double VALUE, const double HIGH_1, const double LOW_1, const double HIGH_2,
                             const double LOW_2)
 {
   return LOW_2 + (VALUE - LOW_1) * (HIGH_2 - LOW_2) / (HIGH_1 - LOW_1);
 }
+/**
+ * @brief Remaps values from one linear range to another, thenpulls the value velow threshold to 0.
+ *
+ * Remap the value in an existing linear range to an new linear range example 0 in [-1, 1] to [0, 1] results in 0.5
+ *
+ * @param  VALUE  Data value to be remapped.
+ * @param  HIGH_1 High value of the old range
+ * @param  LOW_1  Low value of the old range
+ * @param  HIGH_2 High value of the new range
+ * @param  LOW_2  Low value of the new range
+ * @param  CUTOFF  cutoff threshold 
+ * @return        Data value mapped to the new range
+ */
+
+double map_and_clip(const double VALUE, const double HIGH_1, const double LOW_1, const double HIGH_2,
+                            const double LOW_2, const double CUTOFF)
+{
+  double val =linear_tranformation(VALUE, HIGH_1, LOW_1, HIGH_2, LOW_2);
+  return val > CUTOFF ? val : CUTOFF; 
+}
+
+
 
 int main(int argc, char** argv)
 {

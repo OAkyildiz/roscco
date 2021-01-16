@@ -164,6 +164,50 @@ target_link_libraries(
 
 endif()
 
+if(MYRIDE)
+find_package(catkin 
+             REQUIRED COMPONENTS 
+             roscpp 
+             rospy 
+             std_msgs
+	     geometry_msgs
+             ackermann_msgs 
+             genmsg)
+
+include_directories(include
+    ${catkin_INCLUDE_DIRS}
+)
+
+add_library(
+  ${PROJECT_NAME}_pid_control
+  src/pid_control.cpp
+)
+
+add_executable(
+  ${PROJECT_NAME}_myride
+  myride_oscc/${PROJECT_NAME}_myride_controller.cpp
+)
+
+target_include_directories(
+  ${PROJECT_NAME}_myride PUBLIC
+  include
+  oscc/api/include
+)
+
+add_dependencies(
+  ${PROJECT_NAME}_myride
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+
+)
+
+target_link_libraries(
+  ${PROJECT_NAME}_myride
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}_pid_control
+)
+endif()
+
 if(APOLLO AND (KIA_SOUL_EV OR KIA_NIRO))
 
 find_package(catkin 

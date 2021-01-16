@@ -1,0 +1,3 @@
+<launch>
+  <node name="roscco_node" pkg="roscco" type="roscco_node" output="screen"/>
+</launch>

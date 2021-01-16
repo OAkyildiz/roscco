@@ -1,0 +1,6 @@
+<launch>
+  <arg name="test" default="false"/>
+
+  <node unless="$(arg test)" name="roscco_node" pkg="roscco" type="roscco_node" output="screen" />
+  <node name="roscco_myride" pkg="roscco" type="roscco_myride" output="screen" />
+</launch>
