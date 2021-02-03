@@ -28,29 +28,33 @@
 #include <vehicles.h>
 
 //rosparam these
-#define THROTTLE_RATIO 0.393
-#define STEERING_RATIO 0.018
+
+//#define THROTTLE_RATIO 0.393
+//#define STEERING_RATIO 0.018
+#define THROTTLE_RATIO 0.00393 //  ~1/255
+#define STEERING_RATIO 0.00019 //~1/5200
 
 #define THROTTLE_LIMIT 0.4
-#define BRAKE_LIMIT 0.65
-#define BRAKE_LIMIT_SOFT 0.32
+#define BRAKE_LIMIT 0.35
+#define BRAKE_LIMIT_SOFT 0.02
 
-#define THROTTLE_INCREMENT 0.01
-#define BRAKE_INCREMENT 0.01
+#define THROTTLE_INCREMENT THROTTLE_RATIO *2
+
 
 #define SPEED_TOLERANCE 0.5
-#define SPEED_PANIC 6.0 //if the speed error is bigger than this, soft brake
+#define SPEED_PANIC 3.5 //if the speed error is bigger than this, soft brake
 
 #define KM_TO_M 0.621371
 
-// this turns out to be dead wrong. Thanks 3rd party devs
 #if defined( KIA_SOUL_EV )
-    #define BRAKE_RATIO 0.12
-    #define SPEED_RATIO 0.002
+    #define BRAKE_RATIO 0.00115
+    #define SPEED_RATIO 0.5
 #elif defined( KIA_NIRO )
     #define BRAKE_RATIO 0.033
     #define SPEED_RATIO 0.3
 #endif
+
+#define BRAKE_INCREMENT BRAKE_RATIO*20
 
 class MyRideOSCC
 {
@@ -62,6 +66,8 @@ public:
      * This function construct a class which subscribes to Apollo messages and publishes ROSCCO messages
      */
     MyRideOSCC();
+    bool loop_once();
+
 
 private:
 
@@ -101,6 +107,7 @@ private:
 
     bool pubEnableMsg();
     bool pubDisableMsg();
+    
     void OSCCStateCallback(const std_msgs::Bool::ConstPtr& state);
 
     ros::NodeHandle nh;
@@ -114,6 +121,7 @@ private:
     ros::Publisher  obd2_throttle_pub;
     ros::Publisher  obd2_brake_pub;
     ros::Publisher  obd2_steer_angle_pub;
+    ros::Publisher  obd2_steer_torque_pub;
     ros::Publisher  enable_disable_pub;
    
    // Incoming from state controllers
@@ -128,6 +136,9 @@ private:
     ros::Subscriber localization_sub;
 
     double steering_angle_report = 0;
+    double steering_angle_raw_prev = 0;
+    double steering_torque_report = 0;
+
     double throttle_report = 0;
     double brake_report = 0;
     double speed_report = 0;
@@ -135,8 +146,12 @@ private:
     double target_speed = 0;
     double target_steering=0;
 
-    bool enabled_;
+    double v_d=0;
+    double error=0;
+ 
+    bool enabled_=false;
     bool state_; // placeholder flag, future enum
+    bool processed_last_=true;
 };
 
 

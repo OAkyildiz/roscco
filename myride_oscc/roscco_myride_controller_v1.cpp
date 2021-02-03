@@ -69,9 +69,84 @@ bool MyRideOSCC::controlLoop(){
 
 void MyRideOSCC::speedCmdCallback( const std_msgs::Float32::ConstPtr& input ){
 
-    //double v_d=input->data; //desired_speed
-    //double error= v_d - speed_report;
-    v_d=input->data;
+    roscco::ThrottleCommand throttle_msg;
+    roscco::BrakeCommand brake_msg;   
+    
+    double v_d=input->data; //desired_speed
+    double error= v_d - speed_report;
+    // TODO: make switch case
+    if (enabled_ ){
+        
+        if(v_d < 0){
+        ROS_INFO("CB Park");
+        throttle_msg.throttle_position = 0;
+        brake_msg.brake_position = BRAKE_LIMIT;
+        enabled_ = pubDisableMsg();
+        }
+             
+        else if (v_d == 0){ 
+            //Temporary!
+            ROS_INFO("Brake %f", brake_report);
+
+            throttle_msg.throttle_position = 0;
+            
+            brake_msg.brake_position = brake_report + BRAKE_INCREMENT;
+            if(brake_report < 0.05)
+                brake_msg.brake_position = 0.1 + BRAKE_INCREMENT;
+            if(brake_report> BRAKE_LIMIT)
+                brake_msg.brake_position = BRAKE_LIMIT;
+            }
+            
+            
+        else if (error < -1 *SPEED_PANIC){
+            //TODO: implement throttle memory
+            throttle_msg.throttle_position = 0;
+            brake_msg.brake_position = BRAKE_INCREMENT + brake_report;//*(1+ BRAKE_INCREMENT);
+            if(brake_report> BRAKE_LIMIT_SOFT)
+                brake_msg.brake_position = BRAKE_LIMIT_SOFT;
+            ROS_INFO("Soft Brake");
+        }
+            
+         else if ( abs(error) > SPEED_TOLERANCE ){ //if (error)
+          
+            throttle_msg.throttle_position = throttle_report + error*THROTTLE_INCREMENT;
+            
+           // if(throttle_report < 0.5)
+           //     throttle_msg.throttle_position = 0.1 + THROTTLE_INCREMENT;
+            if(throttle_report> THROTTLE_LIMIT)
+                throttle_msg.throttle_position = THROTTLE_LIMIT;
+            //throttle_msg.throttle_position = throttle_report > THROTTLE_LIMIT ? throttle_report + 0.05 *error : THROTTLE_LIMIT; 
+            ROS_INFO("Throttle: adjust %f", throttle_report);
+            brake_msg.brake_position = 0;
+        }
+
+        else{
+            ROS_INFO("Throttle: maintain");
+            throttle_msg.throttle_position = throttle_report;
+            brake_msg.brake_position = 0;
+        }
+    
+    throttle_msg.header.stamp = ros::Time::now();
+    brake_msg.header.stamp = throttle_msg.header.stamp ;
+
+    brake_pub.publish(brake_msg);
+    throttle_pub.publish(throttle_msg);
+    ROS_INFO("      [CMD]Throttle: %f  Brake: %f E_sp: %f",throttle_msg.throttle_position, brake_msg.brake_position, error);
+
+    }
+        
+    else if (!enabled_ && (v_d == 0)){
+        ROS_INFO("CB Enable");
+        throttle_msg.throttle_position = 0;
+        enabled_ = pubEnableMsg();
+        brake_msg.brake_position = BRAKE_LIMIT;
+        }
+   
+
+    //soft brake
+
+    //control inputs to OSCC
+    
 }
 
 void MyRideOSCC::steeringCmdCallback( const std_msgs::Float32::ConstPtr& input ) 
@@ -118,22 +193,9 @@ void MyRideOSCC::canFrameCallback( const roscco::CanFrame& input )
     static double brake_raw = 0;
     static double steering_angle_raw = 0;
     static double steering_torque_raw = 0;
-    static std_msgs::Int16 int_msg;
-    static std_msgs::Float32 float_msg;
 
-    //TODO: try this
-    // static bool first = true;
-    // double throttle_raw = 0;
-    // double brake_raw = 0;
-    // double steering_angle_raw = 0;
-    // double steering_torque_raw = 0;
-    // std_msgs::Int16 int_msg;
-    // std_msgs::Float32 float_msg;
     switch( input.frame.can_id )
     {
-        //TODO: * check rate
-        //      * enable flag
-        // make it a mutex lock
         case KIA_SOUL_OBD_THROTTLE_PRESSURE_CAN_ID: 
         {
             #if defined( KIA_SOUL_EV )
@@ -141,7 +203,7 @@ void MyRideOSCC::canFrameCallback( const roscco::CanFrame& input )
             #elif defined( KIA_NIRO )
                 throttle_raw = input.frame.data[7];
             #endif
-            //if (processed_last_)
+
             throttle_report = throttle_raw * THROTTLE_RATIO;
             // throttle_report = throttle_report ;
             break;
@@ -153,7 +215,7 @@ void MyRideOSCC::canFrameCallback( const roscco::CanFrame& input )
             #elif defined( KIA_NIRO )
                 brake_raw = input.frame.data[3] + input.frame.data[4] * 256;
             #endif
-            //if (processed_last_)
+
             brake_report = brake_raw * BRAKE_RATIO;
             // brake_report = brake_report;
             break;
@@ -167,7 +229,7 @@ void MyRideOSCC::canFrameCallback( const roscco::CanFrame& input )
 
             if (steering_angle_raw_prev>steering_angle_raw)
                 steering_torque_raw=-steering_torque_raw;
-            //if (processed_last_)
+
             steering_angle_report = steering_angle_raw * STEERING_RATIO;
             // steering_angle_report = steering_angle_report;
             break;
@@ -185,8 +247,6 @@ void MyRideOSCC::canFrameCallback( const roscco::CanFrame& input )
                 speed_report = speed_report * SPEED_RATIO;
             
             #endif
-            //where to update speed
-            // error = v_d-speed_report;
 
             break;
         }
@@ -199,16 +259,23 @@ void MyRideOSCC::canFrameCallback( const roscco::CanFrame& input )
     // instead our own individual pubs. consider making a chassis-like message
     //apollo::canbus::Chassis output;
 
-    /// THIS CAN GO INTO THE MAIN_LOOP/ 2nd thread
+     if (!enabled_ && first){
+        first=false;
+        ROS_INFO("Initial brake");
+        roscco::BrakeCommand brake_msg;   
+        enabled_ = pubEnableMsg();
+        brake_msg.brake_position = BRAKE_LIMIT;
+        
+        brake_msg.header.stamp = ros::Time::now(); ;
+        brake_pub.publish(brake_msg);
+    }
     
-    /*
+    std_msgs::Int16 int_msg;
+    std_msgs::Float32 float_msg;
     // output.set_steering_percentage( steering_angle_report );
     // output.set_throttle_percentage( throttle_report );
     // output.set_brake_percentage( brake_report );
     // output.set_speed_mps( speed_report );
-    */
-
-
     float_msg.data=speed_report*1;
     obd2_speed_pub.publish(float_msg);
     
@@ -256,95 +323,6 @@ bool MyRideOSCC::pubDisableMsg(){
     return false;
     }
 
-bool MyRideOSCC::loop_once(){
-    static roscco::ThrottleCommand throttle_msg;
-    static roscco::BrakeCommand brake_msg;   
-    // TODO: make switch case
-    static bool first;  
-    if (!enabled_ && first){
-        first=false;
-        ROS_INFO("Initial brake");
-        //roscco::BrakeCommand brake_msg;   
-        enabled_ = pubEnableMsg();
-        brake_msg.brake_position = BRAKE_LIMIT;
-        
-        brake_msg.header.stamp = ros::Time::now(); ;
-        brake_pub.publish(brake_msg);
-    }
-
-    if (enabled_ ){
-        error = v_d - speed_report;
-
-        if(v_d < 0){
-        ROS_INFO("CB Park");
-        throttle_msg.throttle_position = 0;
-        brake_msg.brake_position = BRAKE_LIMIT;
-        enabled_ = pubDisableMsg();
-        }
-        
-        else if (v_d == 0){ 
-            //Temporary!
-            ROS_INFO("Brake %f", brake_report);
-
-            throttle_msg.throttle_position = 0;
-            
-            brake_msg.brake_position = brake_report + BRAKE_INCREMENT;
-            if(brake_report < 0.05)
-                brake_msg.brake_position = 0.1 + BRAKE_INCREMENT;
-            if(brake_report> BRAKE_LIMIT)
-                brake_msg.brake_position = BRAKE_LIMIT;
-            }
-            
-            
-        else if (error < -1 *SPEED_PANIC){
-            //TODO: implement throttle memory
-            throttle_msg.throttle_position = 0;
-            brake_msg.brake_position = BRAKE_INCREMENT + brake_report;//*(1+ BRAKE_INCREMENT);
-            if(brake_report> BRAKE_LIMIT_SOFT)
-                brake_msg.brake_position = BRAKE_LIMIT_SOFT;
-            ROS_INFO("Soft Brake");
-        }
-            
-         else if ( abs(error) > SPEED_TOLERANCE ){ //if (error)
-          
-            throttle_msg.throttle_position = throttle_report + error*THROTTLE_INCREMENT;
-            
-           // if(throttle_report < 0.5)
-           //     throttle_msg.throttle_position = 0.1 + THROTTLE_INCREMENT;
-            if(throttle_report> THROTTLE_LIMIT)
-                throttle_msg.throttle_position = THROTTLE_LIMIT;
-            //throttle_msg.throttle_position = throttle_report > THROTTLE_LIMIT ? throttle_report + 0.05 *error : THROTTLE_LIMIT; 
-            ROS_INFO("Throttle: adjust %f", throttle_report);
-            brake_msg.brake_position = 0;
-        }
-
-    else{
-            ROS_INFO("Throttle: maintain");
-            throttle_msg.throttle_position = throttle_report;
-            brake_msg.brake_position = 0;
-    }
-
-   
-    
-    
-    throttle_msg.header.stamp = ros::Time::now();
-    brake_msg.header.stamp = throttle_msg.header.stamp ;
-
-    brake_pub.publish(brake_msg);
-    throttle_pub.publish(throttle_msg);
-    ROS_INFO("      [CMD]Throttle: %f  Brake: %f E_sp: %f",throttle_msg.throttle_position, brake_msg.brake_position, error);
-    //for now steering is outside
-    }
-        
-    else if (!enabled_ && (v_d == 0)){
-        ROS_INFO("Enable");
-        throttle_msg.throttle_position = 0;
-        enabled_ = pubEnableMsg();
-        brake_msg.brake_position = BRAKE_LIMIT;
-        }
-
-}
-
 void closedLoopControl( double setpoint, 
                         roscco::SteeringCommand& output,
                         double steering_angle_report ) //Position must be [-1,1]
@@ -368,23 +346,7 @@ void closedLoopControl( double setpoint,
 int main( int argc, char** argv )
 {
     ros::init( argc, argv, "roscco_myride" );
-    MyRideOSCC *roscco_myride = new MyRideOSCC();
-    ros::Rate r(40); // 10 hz
-
-    //#if defined( M_THREAD )
-
-    //ros::MultiThreadedSpinner spinner(2);
-    //ros::AsyncSpinner spinner(2);
-
-    while (ros::ok()){
-        
-            roscco_myride->loop_once();
-            ros::spinOnce();
-            //r.spinOnce()
-            r.sleep();
-        }
-   // ROS_INFO("Exiting")
-   // roscco_myride.pubDisableMsg();
-
-
+    MyRideOSCC roscco_myride;
+ 
+    ros::spin();
 }

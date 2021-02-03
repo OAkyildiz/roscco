@@ -32,8 +32,11 @@ int main(int argc, char* argv[])
   RosToOscc subcriber(&public_nh, &private_nh);
   OsccToRos publisher(&public_nh, &private_nh);
 
-  ros::spin();
-
+  ros::Rate r(40);
+  while(ros::ok()){
+  	ros::spinOnce();
+	r.sleep();
+  }
   ret = oscc_disable();
 
   if (ret != OSCC_OK)
