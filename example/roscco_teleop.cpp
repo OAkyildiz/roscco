@@ -119,7 +119,7 @@ void RosccoTeleop::joystickCallback(const sensor_msgs::Joy::ConstPtr& joy)
     
     // Map the joystick to steering [1, -1] to oscc values [-1, 1]
     steering_ =
-        linear_tranformation(joy->axes[STEERING_AXES_], JOYSTICK_MAX_, JOYSTICK_MIN_, STEERING_MAX_, STEERING_MIN_);
+        linear_tranformation(joy->axes[STEERING_AXES_], JOYSTICK_MAX_, JOYSTICK_MIN_, STEERING_MIN_, STEERING_MAX_);
     
     ROS_DEBUG("Brake: %f    Throttle: %f    Steering: %f",brake_, throttle_, steering_);
     roscco::EnableDisable enable_msg;
@@ -177,11 +177,12 @@ void RosccoTeleop::joystickCallback(const sensor_msgs::Joy::ConstPtr& joy)
 
     // throttle must be cleared beofre brake
     if ( throttle_check_ ) {
-      if ((BRAKE_AXIS_DIRECTION * joy->axes[BRAKE_AXES_] <= PARKED_THRESHOLD_) && ( !brake_check_ ) ) {
+	if (((BRAKE_AXIS_DIRECTION * joy->axes[BRAKE_AXES_]) <= PARKED_THRESHOLD_) &&  (!(brake_check_)) ) {
         ROS_INFO("Pull the brake stick to initialize.");
       }
-      else{
+    	else{
           brake_check_ = true;
+	  ROS_INFO("Brake OK");
       }
     } 
     else{
@@ -190,6 +191,8 @@ void RosccoTeleop::joystickCallback(const sensor_msgs::Joy::ConstPtr& joy)
         }
       else{
           throttle_check_ = true;
+	  ROS_INFO("Throttle OK");
+
       }
     }
   }
