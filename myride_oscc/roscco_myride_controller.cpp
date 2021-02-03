@@ -14,7 +14,7 @@ MyRideOSCC::MyRideOSCC()
     
     pid_state state;
     //initialize PID state (call this at new distinct command as well)
-    createPIDState( 0, &state );
+    createPIDState( 0, steer_state);
     //dynamic_reconfigure these
     params->max = 1;
     params->min = -1;
@@ -83,22 +83,6 @@ bool MyRideOSCC::controlLoop(){
 void MyRideOSCC::speedCmdCallback( const std_msgs::Float32::ConstPtr& input ){
 
     //double v_d=input->data; //desired_speed
-<<<<<<< HEAD
-    //double error= v_d - speed_report;
-    v_d=input->data;
-}
-
-void MyRideOSCC::steeringCmdCallback( const std_msgs::Float32::ConstPtr& input ) 
-{
-    if(enabled_){
-        roscco::SteeringCommand output;
-        output.header.stamp = ros::Time::now();
-        //closedLoopControl( input.steering_target(), output, steering_angle_report );
-        closedLoopControl( input->data, output, steering_angle_report );
-        ROS_INFO("      [CMD] Steering: %f", output.steering_torque);
-        steering_pub.publish( output );
-        }
-=======
     //double speed_error= v_d - speed_report;
     v_d=input->data;
 }
@@ -113,15 +97,15 @@ void MyRideOSCC::steeringCmdCallback( const std_msgs::Float32::ConstPtr& input )
     if(enabled_){
 
         if(new_state){
-            createPIDState( target_steering, state);
+            createPIDState( target_steering, steer_state);
         }
         else{
-            state->setpoint = target_steering;
+            steer_state->setpoint = target_steering;
         }
         roscco::SteeringCommand output;
         output.header.stamp = ros::Time::now();
         //closedLoopControl( input.steering_target(), output, steering_angle_report );
-        pidController( params, state, steering_angle_report );
+        pidController( params, steer_state, steering_angle_report );
         //P( target_steering, output, steering_angle_report );
         ROS_INFO("      [CMD] Steering: %f", output.steering_torque);
         steering_torque_pub.publish( output );
@@ -130,7 +114,6 @@ void MyRideOSCC::steeringCmdCallback( const std_msgs::Float32::ConstPtr& input )
     }
 
     prev_target_steering = target_steering;
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
 }
 
 //Following two directly dictate throttle and brake values. Not used in this example
@@ -233,11 +216,7 @@ void MyRideOSCC::canFrameCallback( const roscco::CanFrame& input )
             
             #endif
             //where to update speed
-<<<<<<< HEAD
-            // error = v_d-speed_report;
-=======
             // speed_error = v_d-speed_report;
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
 
             break;
         }
@@ -322,15 +301,9 @@ bool MyRideOSCC::loop_once(){
         brake_msg.header.stamp = ros::Time::now(); ;
         brake_pub.publish(brake_msg);
     }
-<<<<<<< HEAD
-
-    if (enabled_ ){
-        error = v_d - speed_report;
-=======
     // convert to int math
     if (enabled_ ){
         speed_error = v_d - speed_report;
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
 
         if(v_d < 0){
         ROS_INFO("CB Park");
@@ -353,11 +326,7 @@ bool MyRideOSCC::loop_once(){
             }
             
             
-<<<<<<< HEAD
-        else if (error < -1 *SPEED_PANIC){
-=======
         else if (speed_error < -1 *SPEED_PANIC){
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
             //TODO: implement throttle memory
             throttle_msg.throttle_position = 0;
             brake_msg.brake_position = BRAKE_INCREMENT + brake_report;//*(1+ BRAKE_INCREMENT);
@@ -366,25 +335,15 @@ bool MyRideOSCC::loop_once(){
             ROS_INFO("Soft Brake");
         }
             
-<<<<<<< HEAD
-         else if ( abs(error) > SPEED_TOLERANCE ){ //if (error)
-          
-            throttle_msg.throttle_position = throttle_report + error*THROTTLE_INCREMENT;
-=======
          else if ( abs(speed_error) > SPEED_TOLERANCE ){ //if (speed_error)
           
             throttle_msg.throttle_position = throttle_report + speed_error*THROTTLE_INCREMENT;
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
             
            // if(throttle_report < 0.5)
            //     throttle_msg.throttle_position = 0.1 + THROTTLE_INCREMENT;
             if(throttle_report> THROTTLE_LIMIT)
                 throttle_msg.throttle_position = THROTTLE_LIMIT;
-<<<<<<< HEAD
-            //throttle_msg.throttle_position = throttle_report > THROTTLE_LIMIT ? throttle_report + 0.05 *error : THROTTLE_LIMIT; 
-=======
             //throttle_msg.throttle_position = throttle_report > THROTTLE_LIMIT ? throttle_report + 0.05 *speed_error : THROTTLE_LIMIT; 
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
             ROS_INFO("Throttle: adjust %f", throttle_report);
             brake_msg.brake_position = 0;
         }
@@ -394,7 +353,6 @@ bool MyRideOSCC::loop_once(){
             throttle_msg.throttle_position = throttle_report;
             brake_msg.brake_position = 0;
     }
-<<<<<<< HEAD
 
    
     
@@ -402,44 +360,6 @@ bool MyRideOSCC::loop_once(){
     throttle_msg.header.stamp = ros::Time::now();
     brake_msg.header.stamp = throttle_msg.header.stamp ;
 
-    brake_pub.publish(brake_msg);
-    throttle_pub.publish(throttle_msg);
-    ROS_INFO("      [CMD]Throttle: %f  Brake: %f E_sp: %f",throttle_msg.throttle_position, brake_msg.brake_position, error);
-    //for now steering is outside
-    }
-        
-    else if (!enabled_ && (v_d == 0)){
-        ROS_INFO("Enable");
-        throttle_msg.throttle_position = 0;
-        enabled_ = pubEnableMsg();
-        brake_msg.brake_position = BRAKE_LIMIT;
-        }
-
-}
-
-void closedLoopControl( double setpoint, 
-                        roscco::SteeringCommand& output,
-                        double steering_angle_report ) //Position must be [-1,1]
-{
-    pid_terms params;
-    pid_state state;
-=======
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
-
-   
-    
-    
-    throttle_msg.header.stamp = ros::Time::now();
-    brake_msg.header.stamp = throttle_msg.header.stamp ;
-
-<<<<<<< HEAD
-    params.max = 1;
-    params.min = -1;
-    params.p_term = 1.5;
-    params.i_term = 0.1;
-    params.d_term = 0.06;
-    params.i_max = 400;
-=======
     brake_pub.publish(brake_msg);
     throttle_pub.publish(throttle_msg);
     ROS_INFO("      [CMD]Throttle: %f  Brake: %f E_sp: %f",throttle_msg.throttle_position, brake_msg.brake_position, speed_error);
@@ -452,8 +372,8 @@ void closedLoopControl( double setpoint,
         enabled_ = pubEnableMsg();
         brake_msg.brake_position = BRAKE_LIMIT;
         }
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
 
+    return true;
 }
 
 // void closedLoopControl( double setpoint, 

@@ -30,26 +30,11 @@
 #include <vehicles.h>
 
 //rosparam these
-<<<<<<< HEAD
-
-//#define THROTTLE_RATIO 0.393
-//#define STEERING_RATIO 0.018
-#define THROTTLE_RATIO 0.00393 //  ~1/255
-#define STEERING_RATIO 0.00019 //~1/5200
-=======
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
 
 //#define THROTTLE_RATIO 0.393
 //#define STEERING_RATIO 0.018
 #define THROTTLE_RATIO 0.00393 //  ~1/255
 #define THROTTLE_LIMIT 0.4
-<<<<<<< HEAD
-#define BRAKE_LIMIT 0.35
-#define BRAKE_LIMIT_SOFT 0.02
-
-#define THROTTLE_INCREMENT THROTTLE_RATIO *2
-
-=======
 #define THROTTLE_INCREMENT THROTTLE_RATIO *2
 
 #define BRAKE_LIMIT 0.35
@@ -57,7 +42,6 @@
 
 #define STEERING_RATIO 0.00019 //~1/5200
 #define STEERING_STATE_TOLERANCE 0.15
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
 
 #define SPEED_TOLERANCE 0.5
 #define SPEED_PANIC 3.5 //if the speed error is bigger than this, soft brake
@@ -168,22 +152,15 @@ private:
     double prev_target_steering=0;
 
     double v_d=0;
-<<<<<<< HEAD
-    double error=0;
-=======
     double speed_error=0;
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
  
     bool enabled_=false;
     bool state_; // placeholder flag, future enum
     bool processed_last_=true;
-<<<<<<< HEAD
-=======
 
     pid_terms* params;
-    pid_state* state;
+    pid_state* steer_state;
 
->>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
 };
 
 
