@@ -9,6 +9,8 @@ void createPIDState( double setpoint, pid_state *state )
 
 double pidController( pid_terms *terms, pid_state *state, double position )
 {
+    //State machine for PID
+    
     ///Calculate error
     double error = position - state->setpoint;
 

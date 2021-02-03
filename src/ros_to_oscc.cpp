@@ -17,7 +17,9 @@ RosToOscc::RosToOscc(ros::NodeHandle* public_nh, ros::NodeHandle* private_nh)
   }
 
   topic_brake_command_ = public_nh->subscribe<roscco::BrakeCommand>("brake_command", 10, &RosToOscc::brakeCommandCallback, this);
-  topic_steering_command_ = public_nh->subscribe<roscco::SteeringCommand>("steering_command", 10, &RosToOscc::steeringCommandCallback, this);
+  topic_steering_command_ = public_nh->subscribe<roscco::SteeringCommand>("steering_torque_command", 10, &RosToOscc::steeringCommandCallback, this);
+  topic_steering_angle_command_ = public_nh->subscribe<roscco::SteeringAngleCommand>("steering_angle_command", 10, &RosToOscc::steeringAngleCommandCallback, this);
+
   topic_throttle_command_ = public_nh->subscribe<roscco::ThrottleCommand>("throttle_command", 10, &RosToOscc::throttleCommandCallback, this);
 
   topic_enable_disable_command_ = public_nh->subscribe<roscco::EnableDisable>("enable_disable", 10, &RosToOscc::enableDisableCallback, this);
@@ -58,6 +60,24 @@ void RosToOscc::steeringCommandCallback(const roscco::SteeringCommand::ConstPtr&
   {
     ROS_WARN("OSCC_WARNING occured while trying send the steering torque.");
   }
+};
+
+void RosToOscc::steeringAngleCommandCallback(const roscco::SteeringAngleCommand::ConstPtr& msg)
+{
+  oscc_result_t ret = OSCC_ERROR;
+  //DO PID HERE
+
+
+  // ret = oscc_publish_steering_torque(msg->steering_angle);
+
+  // if (ret == OSCC_ERROR)
+  // {
+  //   ROS_ERROR("OSCC_ERROR occured while trying send the steering torque.");
+  // }
+  // else if (ret == OSCC_WARNING)
+  // {
+  //   ROS_WARN("OSCC_WARNING occured while trying send the steering torque.");
+  // }
 };
 
 void RosToOscc::throttleCommandCallback(const roscco::ThrottleCommand::ConstPtr& msg)

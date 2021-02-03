@@ -34,6 +34,7 @@ add_message_files(
    FaultReport.msg
    FaultReportData.msg
    SteeringCommand.msg
+   SteeringAngleCommand.msg
    SteeringReport.msg
    SteeringReportData.msg
    ThrottleCommand.msg
@@ -109,6 +110,8 @@ add_dependencies(
   ${PROJECT_NAME}_ros_to_oscc
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
+  #roscco_gencpp
+
 )
 
 add_dependencies(
@@ -155,6 +158,7 @@ add_dependencies(
   ${PROJECT_NAME}_teleop
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
+  #roscco_gencpp
 )
 
 target_link_libraries(
@@ -197,7 +201,9 @@ target_include_directories(
 add_dependencies(
   ${PROJECT_NAME}_myride
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS} 
+  #roscco_gencpp
+
 
 )
 
