@@ -3,8 +3,10 @@
 //to_OSCC
 #include <roscco/BrakeCommand.h>
 #include <roscco/SteeringCommand.h>
+#include <roscco/SteeringAngleCommand.h>
 #include <roscco/ThrottleCommand.h>
 #include <roscco/EnableDisable.h>
+
 
 // FROM OSCC
 #include <roscco/CanFrame.h>
@@ -28,18 +30,34 @@
 #include <vehicles.h>
 
 //rosparam these
+<<<<<<< HEAD
 
 //#define THROTTLE_RATIO 0.393
 //#define STEERING_RATIO 0.018
 #define THROTTLE_RATIO 0.00393 //  ~1/255
 #define STEERING_RATIO 0.00019 //~1/5200
+=======
+>>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
 
+//#define THROTTLE_RATIO 0.393
+//#define STEERING_RATIO 0.018
+#define THROTTLE_RATIO 0.00393 //  ~1/255
 #define THROTTLE_LIMIT 0.4
+<<<<<<< HEAD
 #define BRAKE_LIMIT 0.35
 #define BRAKE_LIMIT_SOFT 0.02
 
 #define THROTTLE_INCREMENT THROTTLE_RATIO *2
 
+=======
+#define THROTTLE_INCREMENT THROTTLE_RATIO *2
+
+#define BRAKE_LIMIT 0.35
+#define BRAKE_LIMIT_SOFT 0.02
+
+#define STEERING_RATIO 0.00019 //~1/5200
+#define STEERING_STATE_TOLERANCE 0.15
+>>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
 
 #define SPEED_TOLERANCE 0.5
 #define SPEED_PANIC 3.5 //if the speed error is bigger than this, soft brake
@@ -114,7 +132,9 @@ private:
 
     ros::Publisher throttle_pub;
     ros::Publisher brake_pub;
-    ros::Publisher steering_pub;
+    ros::Publisher steering_torque_pub;
+    ros::Publisher steering_angle_pub;
+
     //ros::Publisher chassis_pub;
     //publishers for data from processed can_frames
     ros::Publisher  obd2_speed_pub;
@@ -144,14 +164,26 @@ private:
     double speed_report = 0;
     
     double target_speed = 0;
-    double target_steering=0;
+    double target_steering = 0;
+    double prev_target_steering=0;
 
     double v_d=0;
+<<<<<<< HEAD
     double error=0;
+=======
+    double speed_error=0;
+>>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
  
     bool enabled_=false;
     bool state_; // placeholder flag, future enum
     bool processed_last_=true;
+<<<<<<< HEAD
+=======
+
+    pid_terms* params;
+    pid_state* state;
+
+>>>>>>> 6763d7ee1f21133ea460e4c1e1fa016a336364e3
 };
 
 
@@ -162,6 +194,6 @@ private:
  * @param command
  * @param steering angle position
  */
-void closedLoopControl( double setpoint,
-                        roscco::SteeringCommand& output,
-                        double steering_angle_report );
+//  void closedLoopControl( double setpoint,
+//                         roscco::SteeringCommand& output,
+//                         double steering_angle_report );

@@ -12,6 +12,7 @@ extern "C" {
 #include <roscco/BrakeCommand.h>
 #include <roscco/EnableDisable.h>
 #include <roscco/SteeringCommand.h>
+#include <roscco/SteeringAngleCommand.h>
 #include <roscco/ThrottleCommand.h>
 
 class RosToOscc
@@ -44,6 +45,7 @@ public:
    * @param msg ROS SteeringCommand message to be consumed.
    */
   void steeringCommandCallback(const roscco::SteeringCommand::ConstPtr& msg);
+  void steeringAngleCommandCallback(const roscco::SteeringAngleCommand::ConstPtr& msg);
 
   /**
    * @brief Callback function to publish ROS ThrottleCommand messages to OSCC.
@@ -67,6 +69,7 @@ private:
   ros::Subscriber topic_brake_command_;
 
   ros::Subscriber topic_steering_command_;
+  ros::Subscriber topic_steering_angle_command_;
 
   ros::Subscriber topic_throttle_command_;
 
