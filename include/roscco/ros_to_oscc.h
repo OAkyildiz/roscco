@@ -15,6 +15,10 @@ extern "C" {
 #include <roscco/SteeringAngleCommand.h>
 #include <roscco/ThrottleCommand.h>
 
+#include <roscco/pid_control.h>
+
+
+#define STEERING_STATE_TOLERANCE 0.06 //test
 class RosToOscc
 {
 public:
@@ -26,7 +30,7 @@ public:
    * @param public_nh  The public node handle to use for ROS subscribers.
    * @param private_nh The private node handle for ROS parameters.
    */
-  RosToOscc(ros::NodeHandle* public_nh, ros::NodeHandle* private_nh);
+  RosToOscc(ros::NodeHandle* public_nh, ros::NodeHandle* private_nh, double& steering_address);
 
   /**
    * @brief Callback function to publish ROS BrakeCommand messages to OSCC.
@@ -74,6 +78,14 @@ private:
   ros::Subscriber topic_throttle_command_;
 
   ros::Subscriber topic_enable_disable_command_;
+
+  pid_terms* params;
+  pid_state* steer_state;
+
+  bool new_pid_state=false;
+  double prev_steering_angle_command=0;
+
+  double* steering_angle_report_ptr;
 };
 
 #endif  // ROS_TO_OSCC_H

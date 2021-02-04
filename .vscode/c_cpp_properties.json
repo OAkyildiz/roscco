@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/opt/ros/noetic/include/**",
+        "/home/oakyildiz/workspaces/ws_myride/devel/include/**",
+        "/usr/local/include/**",
+        "/home/oakyildiz/workspaces/ws_myride/src/myride_controller/include/**",
+        "/home/oakyildiz/workspaces/ws_myride/src/myride_perception/include/**",
+        "/home/oakyildiz/workspaces/ws_myride/src/roscco/include/**",
+        "/home/oakyildiz/workspaces/ws_myride/src/zed-ros-wrapper/zed_interfaces/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}

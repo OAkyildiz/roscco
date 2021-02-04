@@ -20,6 +20,7 @@ extern "C" {
 #include <roscco/ThrottleReport.h>
 #include <roscco/ThrottleReportData.h>
 
+#include <vehicles.h>
 
 static ros::Publisher topic_brake_report_;
 
@@ -120,6 +121,10 @@ public:
    */
   template <class OSCCTYPE, class ROSMSGTYPE, class ROSDATATYPE>
   static void cast_callback(OSCCTYPE* report, ros::Publisher* pub);
+  double& getSteeringReportAddress();
+private:
+  // hold the steering report
+  static double steering_angle_report;
 };
 
 #endif  // OSCC_TO_ROS_H

@@ -29,8 +29,8 @@ int main(int argc, char* argv[])
     ROS_ERROR("Could not initialize OSCC");
   }
 
-  RosToOscc subcriber(&public_nh, &private_nh);
   OsccToRos publisher(&public_nh, &private_nh);
+  RosToOscc subcriber(&public_nh, &private_nh, publisher.getSteeringReportAddress());
 
   ros::Rate r(40);
   while(ros::ok()){

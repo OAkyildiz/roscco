@@ -41,6 +41,7 @@
 #define BRAKE_LIMIT_SOFT 0.02
 
 #define STEERING_RATIO 0.00019 //~1/5200
+#define STEERING_MAX 5130
 #define STEERING_STATE_TOLERANCE 0.15
 
 #define SPEED_TOLERANCE 0.5
@@ -77,6 +78,7 @@ private:
    // void commandCallback( const std_msgs::String&::ConstPtr input ); 
    // void ackermannCallback( const ackermann_msgs::AckermannDriveStamped&::ConstPtr input ); 
     void speedCmdCallback( const std_msgs::Float32::ConstPtr& input ); 
+    void steeringCmdCallback( const std_msgs::Float32::ConstPtr& input ); 
 
     
     /**
@@ -84,7 +86,7 @@ private:
      *
      * @param apollo control command message to be consumed
      */
-    void steeringCmdCallback( const std_msgs::Float32::ConstPtr& input ); 
+    void steeringCmdPIDCallback( const std_msgs::Float32::ConstPtr& input ); 
     
     /**
      * @brief Callback function to pipe Apollo BrakeCommand to ROSCCO
@@ -132,6 +134,7 @@ private:
    // ros::Subscriber ackermann_sub;
     ros::Subscriber cmd_speed_sub;
     ros::Subscriber cmd_steering_sub;
+    ros::Subscriber cmd_steering_pid_sub;
     ros::Subscriber cmd_throttle_sub;
     ros::Subscriber cmd_brake_sub;
     

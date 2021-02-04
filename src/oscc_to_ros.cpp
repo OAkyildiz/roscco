@@ -1,4 +1,5 @@
 #include <roscco/oscc_to_ros.h>
+double OsccToRos::steering_angle_report=0;
 
 OsccToRos::OsccToRos(ros::NodeHandle* public_nh, ros::NodeHandle* private_nh)
 {
@@ -95,7 +96,7 @@ void OsccToRos::fault_callback(oscc_fault_report_s* report)
 void OsccToRos::obd_callback(can_frame* frame)
 {
   roscco::CanFrame* ros_message(new roscco::CanFrame);
-
+  static int steering_angle_raw = 0;
   ros_message->frame.can_id = frame->can_id;
 
   ros_message->frame.can_dlc = frame->can_dlc;
@@ -105,9 +106,23 @@ void OsccToRos::obd_callback(can_frame* frame)
     ros_message->frame.data[i] = frame->data[i];
   }
 
+  if (frame->can_id == KIA_SOUL_OBD_STEERING_WHEEL_ANGLE_CAN_ID){
+
+    steering_angle_raw = (frame->data[0] + frame->data[1] * 256);
+    //steering_torque_raw = frame->data[2] ;
+    if( steering_angle_raw > 27768 ) 
+        steering_angle_raw -= 65535;
+    steering_angle_report = steering_angle_raw / 5130;// STEERING_MAX; 
+    //TODO: add this and similar to vehicles.h to refer to a single def.
+  }
+
   ros_message->header.stamp = ros::Time::now();
 
   topic_obd_messages_.publish(*ros_message);
 
   delete ros_message;
+}
+
+double& OsccToRos::getSteeringReportAddress(){
+  return steering_angle_report;
 }

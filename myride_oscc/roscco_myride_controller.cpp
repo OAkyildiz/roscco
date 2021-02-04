@@ -12,7 +12,6 @@ MyRideOSCC::MyRideOSCC()
 {
     enabled_ = false;
     
-    pid_state state;
     //initialize PID state (call this at new distinct command as well)
     createPIDState( 0, steer_state);
     //dynamic_reconfigure these
@@ -46,7 +45,10 @@ MyRideOSCC::MyRideOSCC()
     //FROM CONTROLLER: DESIRED STATES
     cmd_speed_sub = nh.subscribe( "/navigation/target/speed", 1, &MyRideOSCC::speedCmdCallback, this );
     cmd_steering_sub = nh.subscribe( "/navigation/target/steering", 1, &MyRideOSCC::steeringCmdCallback, this );  
+    cmd_steering_pid_sub = nh.subscribe( "/navigation/target/steering_pid", 1, &MyRideOSCC::steeringCmdPIDCallback, this );  
+
     //This is direct control primarily we are concerned with the desired speed
+
     // but accel, brake could be utilized for more advanced motion profiles
 
     cmd_brake_sub = nh.subscribe( "/navigation/target/brake", 1, &MyRideOSCC::brakeCmdCallback, this );
@@ -57,9 +59,9 @@ MyRideOSCC::MyRideOSCC()
     oscc_state_sub = nh.subscribe( "/oscc_state", 1, &MyRideOSCC::OSCCStateCallback, this );
 
 }
-// This is control loop where speed and steeriong commands are received once
+// This is control loop where speed and steering commands are received once
 
-
+//deprecated
 bool MyRideOSCC::controlLoop(){
     // Copy speedCmdCallback here with v_d replaced with target_speed
     // append steering control loop
@@ -84,12 +86,11 @@ void MyRideOSCC::speedCmdCallback( const std_msgs::Float32::ConstPtr& input ){
 
     //double v_d=input->data; //desired_speed
     //double speed_error= v_d - speed_report;
-    v_d=input->data;
+    v_d=input->data;//TODO: refactor
 }
 //void myRideOSCC::yawCallback()
 //void myRideOSCC::trunCallback()
-
-void MyRideOSCC::steeringCmdCallback( const std_msgs::Float32::ConstPtr& input ) 
+void MyRideOSCC::steeringCmdPIDCallback( const std_msgs::Float32::ConstPtr& input ) 
 {
 
     bool new_state= abs(target_steering - prev_target_steering) > STEERING_STATE_TOLERANCE;
@@ -105,13 +106,32 @@ void MyRideOSCC::steeringCmdCallback( const std_msgs::Float32::ConstPtr& input )
         roscco::SteeringCommand output;
         output.header.stamp = ros::Time::now();
         //closedLoopControl( input.steering_target(), output, steering_angle_report );
-        pidController( params, steer_state, steering_angle_report );
+        output.steering_torque=pidController( params, steer_state, steering_angle_report );
         //P( target_steering, output, steering_angle_report );
         ROS_INFO("      [CMD] Steering: %f", output.steering_torque);
-        steering_torque_pub.publish( output );
+        steering_angle_pub.publish( output );
         
 
     }
+
+    prev_target_steering = target_steering;
+}
+void MyRideOSCC::steeringCmdCallback( const std_msgs::Float32::ConstPtr& input ) 
+{
+    //TODO: consider hnadling command here ( setpoint, counter, conversion etc. and publishing in main loop)
+    
+    bool new_state= abs(target_steering - prev_target_steering) > STEERING_STATE_TOLERANCE;
+    target_steering = input->data;
+
+ 
+    roscco::SteeringAngleCommand output;
+
+    output.header.stamp = ros::Time::now();
+
+    output.steering_angle = input->data; // raw data or angle2int or angle2[-1.0, 1.0]
+    steering_angle_pub.publish( output );
+
+    
 
     prev_target_steering = target_steering;
 }
@@ -198,7 +218,7 @@ void MyRideOSCC::canFrameCallback( const roscco::CanFrame& input )
             if (steering_angle_raw_prev>steering_angle_raw)
                 steering_torque_raw=-steering_torque_raw;
             //if (processed_last_)
-            steering_angle_report = steering_angle_raw * STEERING_RATIO;
+            steering_angle_report = steering_angle_raw / STEERING_MAX;
             // steering_angle_report = steering_angle_report;
             break;
         }

@@ -73,6 +73,18 @@ target_include_directories(
   oscc/api/include
 )
 
+
+
+add_library(
+  ${PROJECT_NAME}_pid_control
+  src/pid_control.cpp
+)
+
+target_include_directories(
+  ${PROJECT_NAME}_pid_control PUBLIC
+  include
+)
+
 add_library(
   ${PROJECT_NAME}_ros_to_oscc
   src/ros_to_oscc.cpp
@@ -103,6 +115,7 @@ target_link_libraries(
 
 target_link_libraries(
   ${PROJECT_NAME}_ros_to_oscc
+  ${PROJECT_NAME}_pid_control
   oscc_api
 )
 
@@ -182,10 +195,6 @@ include_directories(include
     ${catkin_INCLUDE_DIRS}
 )
 
-add_library(
-  ${PROJECT_NAME}_pid_control
-  src/pid_control.cpp
-)
 
 add_executable(
   ${PROJECT_NAME}_myride
