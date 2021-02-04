@@ -12,7 +12,6 @@ MyRideOSCC::MyRideOSCC()
 {
     enabled_ = false;
     
-    pid_state state;
     //initialize PID state (call this at new distinct command as well)
     createPIDState( 0, steer_state);
     //dynamic_reconfigure these
@@ -105,7 +104,7 @@ void MyRideOSCC::steeringCmdCallback( const std_msgs::Float32::ConstPtr& input )
         roscco::SteeringCommand output;
         output.header.stamp = ros::Time::now();
         //closedLoopControl( input.steering_target(), output, steering_angle_report );
-        pidController( params, steer_state, steering_angle_report );
+        output.steering_torque=pidController( params, steer_state, steering_angle_report );
         //P( target_steering, output, steering_angle_report );
         ROS_INFO("      [CMD] Steering: %f", output.steering_torque);
         steering_torque_pub.publish( output );
