@@ -3,6 +3,8 @@
 #include <roscco/BrakeCommand.h>
 #include <roscco/EnableDisable.h>
 #include <roscco/SteeringCommand.h>
+#include <roscco/SteeringAngleCommand.h>
+
 #include <roscco/ThrottleCommand.h>
 #include <sensor_msgs/Joy.h>
 
@@ -91,7 +93,7 @@ RosccoTeleop::RosccoTeleop()
 {
   brake_pub_ = nh_.advertise<roscco::BrakeCommand>("brake_command", QUEUE_SIZE_);
   throttle_pub_ = nh_.advertise<roscco::ThrottleCommand>("throttle_command", QUEUE_SIZE_);
-  steering_pub_ = nh_.advertise<roscco::SteeringCommand>("steering_command", QUEUE_SIZE_);
+  steering_pub_ = nh_.advertise<roscco::SteeringAngleCommand>("steering_angle_command", QUEUE_SIZE_);
   enable_disable_pub_ = nh_.advertise<roscco::EnableDisable>("enable_disable", QUEUE_SIZE_);
 
   joy_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", QUEUE_SIZE_, &RosccoTeleop::joystickCallback, this);
@@ -162,9 +164,9 @@ void RosccoTeleop::joystickCallback(const sensor_msgs::Joy::ConstPtr& joy)
       // Utilize exponential average similar to OSCC's joystick commander for smoothing of joystick twitchy output
       steering_average_ = calc_exponential_average(steering_average_, steering_, DATA_SMOOTHING_FACTOR_);
 
-      roscco::SteeringCommand steering_msg;
+      roscco::SteeringAngleCommand steering_msg;
       steering_msg.header.stamp = ros::Time::now();
-      steering_msg.steering_torque = steering_average_;
+      steering_msg.steering_angle = steering_average_;
       steering_pub_.publish(steering_msg);
     }
   }
